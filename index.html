@@ -29,8 +29,8 @@ table{border-collapse:collapse;width:100%;margin:12px 0;background:#fff} th,td{b
 .small{font-size:.9rem;color:var(--muted)}.formula{font-size:1.15rem;font-weight:700;text-align:center;padding:10px}
 .printsheet{display:none}.qprint{page-break-inside:avoid;margin:0 0 28px}.solprint{page-break-inside:avoid;margin:0 0 18px}
 footer{text-align:center;color:#666;padding:20px}
-@media(max-width:800px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}header img{width:56px;height:56px}}
-@media print{header,aside,.noprint,footer,.tabs{display:none!important}.shell{display:block}.printsheet.printme{display:block!important}.card,.tile{box-shadow:none}.printsheet{font-size:12pt}main{padding:0;max-width:none}.printme svg{max-height:320px}}
+@media(max-width:600px){.diagram svg text{font-size:23px}}@media(max-width:800px){.shell{display:block}aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}header img{width:56px;height:56px}}
+@media print{header,aside,.noprint,footer,.tabs{display:none!important}.shell{display:block}.printsheet.printme{display:block!important}#app:has(.printme)>:not(.printme){display:none!important}.card,.tile{box-shadow:none}.printsheet{font-size:12pt}main{padding:0;max-width:none}.printme svg{max-height:320px}}
 </style>
 </head>
 <body>
@@ -84,10 +84,11 @@ function hist(bars,opt={}){
  const ymax=opt.ymax||Math.max(...bars.map(b=>b.height))*1.2;
  const xs=x=>L+(x-xmin)/(xmax-xmin)*pw, ys=y=>T+ph-y/ymax*ph;
  let rects=bars.map((b,i)=>`<rect x="${xs(b.lo)}" y="${ys(b.height)}" width="${xs(b.hi)-xs(b.lo)}" height="${T+ph-ys(b.height)}" fill="#d9c6e8" stroke="#67358a" stroke-width="2"/>`).join("");
- let ticks=[...new Set(bars.flatMap(b=>[b.lo,b.hi]))].sort((a,b)=>a-b).map(x=>`<line x1="${xs(x)}" y1="${T+ph}" x2="${xs(x)}" y2="${T+ph+6}" stroke="#222"/><text x="${xs(x)}" y="${T+ph+25}" text-anchor="middle" font-size="14">${x}</text>`).join("");
+ let ticks=[...new Set(bars.flatMap(b=>[b.lo,b.hi]).concat((opt.shades||[]).flatMap(s=>[s.from,s.to])))].sort((a,b)=>a-b).map(x=>`<line x1="${xs(x)}" y1="${T+ph}" x2="${xs(x)}" y2="${T+ph+6}" stroke="#222"/><text x="${xs(x)}" y="${T+ph+25}" text-anchor="middle" font-size="14">${x}</text>`).join("");
  let yt="";
  if(opt.showY!==false){
-   for(let i=0;i<=5;i++){let y=ymax*i/5;yt+=`<line x1="${L-5}" y1="${ys(y)}" x2="${L}" y2="${ys(y)}" stroke="#222"/><text x="${L-10}" y="${ys(y)+5}" text-anchor="end" font-size="13">${fmt(y)}</text>`}
+   let st=[0.1,0.2,0.25,0.5,1,2,2.5,5,10,20,25,50,100].find(v=>ymax/v<=10+1e-9)||ymax/5;
+   for(let i=0;i*st<=ymax+1e-9;i++){let y=i*st;yt+=`<line x1="${L-5}" y1="${ys(y)}" x2="${L}" y2="${ys(y)}" stroke="#222"/><text x="${L-10}" y="${ys(y)+5}" text-anchor="end" font-size="13">${fmt(y)}</text>`}
  }
  let shade="";
  if(opt.shades){
@@ -159,7 +160,7 @@ function learn(){
  <div class="formula">Frequency = class width × frequency density</div></div>`
  +steps("One bar",hist([{lo:0,hi:10,height:3}],{ymax:4}),["Class width = 10.","Frequency density = 3.","Area = 10 × 3 = 30.","So the bar represents frequency 30."])
  +steps("Tallest does not necessarily mean most frequent",hist([{lo:0,hi:20,height:2},{lo:20,hi:25,height:5}],{ymax:6}),["First area = 20 × 2 = 40.","Second area = 5 × 5 = 25.","The taller bar has the smaller frequency."])
- +warning("Never identify the modal class by height alone when class widths differ.");
+ +warning("Never decide which class has the greatest frequency by height alone when class widths differ.");
 
  if(sec==="width") return `<div class="card"><h2>${S[sec].title}</h2><p>Before calculating a density, calculate the width of the interval.</p>
  <div class="formula">Class width = upper boundary − lower boundary</div></div>`
@@ -224,9 +225,9 @@ function learn(){
  +steps("Probability example","",["Using the same distribution, P(30 &lt; x ≤ 40) = 20 ÷ 100 = 0.2."]);}
 
  if(sec==="modal"){let bars=[{lo:0,hi:10,height:3},{lo:10,hi:30,height:2},{lo:30,hi:40,height:3.5}];return `<div class="card"><h2>${S[sec].title}</h2>
- <p>The modal class is the class containing the greatest frequency. Since frequency is area, compare bar areas when widths differ.</p></div>`
- +steps("Find the modal class",hist(bars,{ymax:4.5}),["0–10: frequency = 10 × 3 = 30.","10–30: frequency = 20 × 2 = 40.","30–40: frequency = 10 × 3.5 = 35.","The modal class is 10 &lt; x ≤ 30."])
- +warning("The tallest bar is not automatically the modal class.")
+ <p>The modal class is the class in which the data are most concentrated. When class widths differ, this is the class with the greatest <strong>frequency density</strong> (the tallest bar), which is not necessarily the class with the greatest frequency.</p></div>`
+ +steps("Find the modal class",hist(bars,{ymax:4.5}),["Frequency densities: 0–10 is 3, 10–30 is 2, 30–40 is 3.5.","The greatest frequency density is 3.5.","The modal class is 30 &lt; x ≤ 40.","Note: 10–30 has the greatest frequency (20 × 2 = 40), but only because it is twice as wide."])
+ +warning("With unequal class widths, do not choose the class with the greatest frequency as the modal class. Compare frequency densities.")
  +steps("What a histogram cannot tell you exactly","",["It does not show the individual observations.","It usually cannot give an exact mean or median without further information.","Any estimate within a class assumes an even spread."]);}
 
  if(sec==="median"){let bars=[{lo:0,hi:10,height:2},{lo:10,hi:20,height:4},{lo:20,hi:40,height:2}];return `<div class="card"><h2>${S[sec].title}</h2>
@@ -253,7 +254,7 @@ function learn(){
  "For a median estimate, use cumulative frequency and interpolate.",
  "Check whether the question asks for an exact answer or an estimate."
  ])
- +steps("Example crossing two classes",hist([{lo:0,hi:10,height:2},{lo:10,hi:25,height:4},{lo:25,hi:40,height:1.5}],{ymax:5,shades:[{i:1,from:20,to:25},{i:2,from:25,to:30}]}),[
+ +steps("Example crossing two classes",hist([{lo:0,hi:10,height:2},{lo:10,hi:25,height:4},{lo:25,hi:45,height:1.5}],{ymax:5,shades:[{i:1,from:20,to:25},{i:2,from:25,to:30}]}),[
  "20–25 contributes 5 × 4 = 20.",
  "25–30 contributes 5 × 1.5 = 7.5.",
  "Estimated frequency from 20 to 30 = 27.5."
@@ -268,22 +269,22 @@ function make(skill){
  if(skill==="equalHeight"){let a=C([3,4,5]),b=a*2;return{text:`Equal-width classes have frequencies ${a} and ${b}. How many times as tall should the second bar be on a frequency diagram?`,ans:2,why:`With equal widths, height can represent frequency directly. ${b} is twice ${a}.`}}
  if(skill==="equalRead"){rows=[{lo:0,hi:10,f:4},{lo:10,hi:20,f:8},{lo:20,hi:30,f:5}];return{text:"All classes have equal width. Which class has the greatest frequency?",ans:"10–20",why:"The 10–20 class has frequency 8, the greatest value.",diag:freqDiagram(rows,{ymax:10})}}
  if(skill==="unequalCompare") return {text:"Two classes both have frequency 20. Their widths are 5 and 10. If frequency were used as bar height, would the two bars have equal areas?",ans:"No",why:"Their areas would be 5×20=100 and 10×20=200, even though their frequencies are equal."};
- if(skill==="unequalReason") return {text:"Why can frequency not normally be used directly as histogram height when class widths differ?",ans:"Because frequency must be represented by area.",why:"Different widths would distort the areas if height were simply frequency."};
- if(skill==="area"){w=C([5,10,15,20]);d=C([1,1.5,2,2.5,3,4]);f=w*d;return{text:`A histogram bar has class width ${w} and frequency density ${d}. Find its frequency.`,ans:f,why:`Frequency = width × density = ${w} × ${d} = ${f}.`,diag:hist([{lo:0,hi:w,height:d}],{ymax:d+1})}}
+ if(skill==="unequalReason") return {text:"Why can frequency not normally be used directly as histogram height when class widths differ?",choices:["Because frequency must be represented by area.","Because wider classes always have greater frequencies.","Because histogram bars must not touch."],ans:"Because frequency must be represented by area.",why:"Different widths would distort the areas if height were simply frequency."};
+ if(skill==="area"){do{w=C([5,10,15,20]);d=C([1,1.5,2,2.5,3,4]);f=w*d}while(f%1);return{text:`A histogram bar has class width ${w} and frequency density ${d}. Find its frequency.`,ans:f,why:`Frequency = width × density = ${w} × ${d} = ${f}.`,diag:hist([{lo:0,hi:w,height:d}],{ymax:d+1})}}
  if(skill==="areaCompare"){bars=[{lo:0,hi:20,height:2},{lo:20,hi:25,height:5}];return{text:"Which class contains the greater frequency: 0–20 or 20–25?",ans:"0–20",why:"Areas are 20×2=40 and 5×5=25.",diag:hist(bars,{ymax:6})}}
  if(skill==="width"){lo=C([0,5,10,20,30]);w=C([5,10,15,20,25]);hi=lo+w;return{text:`Find the class width of ${lo} < x ≤ ${hi}.`,ans:w,why:`Width = ${hi} − ${lo} = ${w}.`}}
  if(skill==="widthTable"){rows=[{lo:0,hi:5,f:8},{lo:5,hi:20,f:15},{lo:20,hi:50,f:12}];return{text:"What is the width of the class 20 < x ≤ 50?",ans:30,why:"50 − 20 = 30.",diag:ftable(rows,false)}}
  if(skill==="discoverDensity"){w=C([5,10,20]);f=C([20,40,60]);d=f/w;return{text:`A class has frequency ${f} and width ${w}. What height gives the bar area ${f}?`,ans:d,why:`Height = area ÷ width = ${f} ÷ ${w} = ${d}. This height is the frequency density.`}}
  if(skill==="discoverCompare") return {text:"Two classes each have frequency 40. One has width 10 and the other width 20. What densities do they need?",ans:"4, 2",why:"40÷10=4 and 40÷20=2. Both bar areas are 40."};
- if(skill==="density"){w=C([5,10,15,20]);d=C([1,2,2.5,3,4]);f=w*d;lo=R(0,4)*10;hi=lo+w;return{text:`The class ${lo} < x ≤ ${hi} has frequency ${f}. Find its frequency density.`,ans:d,why:`Width = ${w}. Density = ${f} ÷ ${w} = ${d}.`}}
+ if(skill==="density"){do{w=C([5,10,15,20]);d=C([1,2,2.5,3,4]);f=w*d}while(f%1);lo=R(0,4)*10;hi=lo+w;return{text:`The class ${lo} < x ≤ ${hi} has frequency ${f}. Find its frequency density.`,ans:d,why:`Width = ${w}. Density = ${f} ÷ ${w} = ${d}.`}}
  if(skill==="densityTable"){rows=[{lo:0,hi:10,f:20},{lo:10,hi:30,f:40},{lo:30,hi:35,f:15}];return{text:"Find the density for 30 < x ≤ 35.",ans:3,why:"Width=5, so density=15÷5=3.",diag:ftable(rows,false)}}
  if(skill==="drawDensity"){rows=[{lo:0,hi:10,f:20},{lo:10,hi:30,f:30},{lo:30,hi:40,f:40}];return{text:"Calculate the three histogram bar heights.",ans:"2, 1.5, 4",why:"Divide each frequency by its class width.",diag:ftable(rows,false)}}
  if(skill==="drawTable"){w=C([5,10,20]);d=C([1,2,3,4]);f=w*d;return{text:`A class has width ${w} and frequency ${f}. What height should its histogram bar have?`,ans:d,why:`Density=${f}÷${w}=${d}.`}}
- if(skill==="frequency"){w=C([5,10,15,20]);d=C([1,1.5,2,3,4]);f=w*d;return{text:`A bar has width ${w} and density ${d}. Find its frequency.`,ans:f,why:`Frequency=${w}×${d}=${f}.`,diag:hist([{lo:0,hi:w,height:d}],{ymax:d+1})}}
+ if(skill==="frequency"){do{w=C([5,10,15,20]);d=C([1,1.5,2,3,4]);f=w*d}while(f%1);return{text:`A bar has width ${w} and density ${d}. Find its frequency.`,ans:f,why:`Frequency=${w}×${d}=${f}.`,diag:hist([{lo:0,hi:w,height:d}],{ymax:d+1})}}
  if(skill==="readMulti"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:30,height:1.5},{lo:30,hi:40,height:4}];return{text:"Find the total frequency.",ans:90,why:"Areas: 10×2=20, 20×1.5=30, 10×4=40; total 90.",diag:hist(bars,{ymax:5})}}
- if(skill==="missingF"){w=C([8,10,12,15,20]);d=C([1.5,2,2.5,3,4]);f=w*d;return{text:`Width=${w}, density=${d}. Find frequency.`,ans:f,why:`Frequency=${w}×${d}=${f}.`}}
- if(skill==="missingD"){w=C([5,10,12,15]);d=C([2,2.5,3,4]);f=w*d;return{text:`Frequency=${f}, width=${w}. Find density.`,ans:d,why:`Density=${f}÷${w}=${d}.`}}
- if(skill==="missingW"){w=C([5,10,12,15,20]);d=C([1.5,2,2.5,3]);f=w*d;return{text:`Frequency=${f}, density=${d}. Find class width.`,ans:w,why:`Width=${f}÷${d}=${w}.`}}
+ if(skill==="missingF"){do{w=C([8,10,12,15,20]);d=C([1.5,2,2.5,3,4]);f=w*d}while(f%1);return{text:`Width=${w}, density=${d}. Find frequency.`,ans:f,why:`Frequency=${w}×${d}=${f}.`}}
+ if(skill==="missingD"){do{w=C([5,10,12,15]);d=C([2,2.5,3,4]);f=w*d}while(f%1);return{text:`Frequency=${f}, width=${w}. Find density.`,ans:d,why:`Density=${f}÷${w}=${d}.`}}
+ if(skill==="missingW"){do{w=C([5,10,12,15,20]);d=C([1.5,2,2.5,3]);f=w*d}while(f%1);return{text:`Frequency=${f}, density=${d}. Find class width.`,ans:w,why:`Width=${f}÷${d}=${w}.`}}
  if(skill==="scale"){let gu=C([2,4,5]),trueD=C([1,2,2.5]),ww=C([10,20]),ff=ww*trueD,per=trueD/gu;return{text:`A known bar is ${gu} graph units high, width ${ww}, frequency ${ff}. What density does 1 graph unit represent?`,ans:per,why:`True density=${ff}÷${ww}=${trueD}; ${trueD}÷${gu}=${per}.`}}
  if(skill==="scaleMulti"){bars=[{lo:0,hi:10,height:4},{lo:10,hi:30,height:2}];return{text:"The first class has frequency 20. Use it to find the frequency of the second class.",ans:20,why:"First true density=2, so 4 graph units represent density 2. One graph unit=0.5. Second density=1; frequency=20×1=20.",diag:hist(bars,{ymax:5,ylabel:"Graph height units"})}}
  if(skill==="partial"){w=C([10,20,30]);d=C([1,2,3]);let part=w/2;return{text:`A class has width ${w} and density ${d}. Estimate the frequency in half of the class.`,ans:part*d,why:`Half-width=${part}; frequency=${part}×${d}=${part*d}.`}}
@@ -292,20 +293,21 @@ function make(skill){
  if(skill==="percentage"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:30,height:3},{lo:30,hi:40,height:2}];return{text:"What percentage of observations lie in 30 < x ≤ 40?",ans:20,why:"Frequencies are 20,60,20; total=100. Percentage=20%.",diag:hist(bars,{ymax:4})}}
  if(skill==="probability"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:30,height:3},{lo:30,hi:40,height:2}];return{text:"Find P(0 < x ≤ 10). Give a decimal.",ans:0.2,why:"Frequency=20; total=100; probability=20/100=0.2.",diag:hist(bars,{ymax:4})}}
  if(skill==="probAcross"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:30,height:3},{lo:30,hi:40,height:2}];return{text:"Estimate P(20 < x ≤ 35).",ans:0.4,why:"20–30 gives 10×3=30 and 30–35 gives 5×2=10. Required=40; total=100; probability=0.4.",diag:hist(bars,{ymax:4,shades:[{i:1,from:20,to:30},{i:2,from:30,to:35}]})}}
- if(skill==="modal"){bars=[{lo:0,hi:10,height:3},{lo:10,hi:30,height:2},{lo:30,hi:40,height:3.5}];return{text:"Which class is modal?",ans:"10–30",why:"Frequencies are 30,40,35; greatest frequency is 10–30.",diag:hist(bars,{ymax:4.5})}}
- if(skill==="interpret") return {text:"Why can a histogram not normally tell you the exact individual values?",ans:"The data are grouped into class intervals.",why:"It shows interval frequencies, not each observation."};
+ if(skill==="modal"){bars=[{lo:0,hi:10,height:3},{lo:10,hi:30,height:2},{lo:30,hi:40,height:3.5}];return{text:"Which class is modal?",ans:"30–40",why:"Frequency densities are 3, 2 and 3.5. The greatest frequency density is 3.5, so the modal class is 30–40. (10–30 has the greatest frequency, 40, only because it is twice as wide.)",diag:hist(bars,{ymax:4.5})}}
+ if(skill==="interpret") return {text:"Why can a histogram not normally tell you the exact individual values?",choices:["The data are grouped into class intervals.","The vertical axis shows frequency density.","The bars have different widths."],ans:"The data are grouped into class intervals.",why:"It shows interval frequencies, not each observation."};
  if(skill==="compare") return {text:"A narrow bar is taller than a wide bar. Can you conclude the narrow class has greater frequency?",ans:"No",why:"Frequency depends on area, not height alone."};
  if(skill==="medianClass"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:20,height:4},{lo:20,hi:40,height:2}];return{text:"Which class contains the median?",ans:"10–20",why:"Frequencies 20,40,40 total 100. The 50th observation lies in 10–20.",diag:hist(bars,{ymax:5})}}
  if(skill==="medianEstimate"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:20,height:4},{lo:20,hi:40,height:2}];return{text:"Estimate the median.",ans:17.5,why:"Total=100; median position=50. Before median class CF=20. Need 30 of 40 through width 10: 10+(30/40)×10=17.5.",diag:hist(bars,{ymax:5})}}
  if(skill==="multiTable"){rows=[{lo:0,hi:10,f:15},{lo:10,hi:25,f:45},{lo:25,hi:45,f:30}];return{text:"Calculate all densities and identify the tallest bar.",ans:"1.5, 3, 1.5; 10–25",why:"Densities:15÷10=1.5,45÷15=3,30÷20=1.5.",diag:ftable(rows,false)}}
  if(skill==="multiScale") return make("scaleMulti");
- if(skill==="multiPartial"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:25,height:4},{lo:25,hi:40,height:1.5}];return{text:"Estimate the frequency between 20 and 30.",ans:27.5,why:"20–25:5×4=20; 25–30:5×1.5=7.5; total=27.5.",diag:hist(bars,{ymax:5,shades:[{i:1,from:20,to:25},{i:2,from:25,to:30}]})}}
+ if(skill==="multiPartial"){bars=[{lo:0,hi:10,height:2},{lo:10,hi:25,height:4},{lo:25,hi:45,height:1.5}];return{text:"Estimate the frequency between 20 and 30.",ans:27.5,why:"20–25:5×4=20; 25–30:5×1.5=7.5; total=27.5.",diag:hist(bars,{ymax:5,shades:[{i:1,from:20,to:25},{i:2,from:25,to:30}]})}}
  if(skill==="multiProb") return make("probAcross");
  if(skill==="multiMedian") return make("medianEstimate");
  return {text:"State the key histogram relationship.",ans:"Frequency = class width × frequency density",why:"Histogram area represents frequency."};
 }
 
-function normalise(x){return String(x).trim().toLowerCase().replace(/°/g,"").replace(/\s+/g," ").replace(/–/g,"-")}
+function normalise(x){return String(x).trim().toLowerCase().replace(/°/g,"").replace(/[–—]/g,"-").replace(/\s+/g,"").replace(/(\d)(?:<x(?:≤|<=)|to)(\d)/g,"$1-$2").replace(/;/g,",").replace(/\.$/,"")}
+function qt(x){return x.text+(x.choices?`<p><em>Options:</em> ${x.choices.join(" &nbsp;·&nbsp; ")}</p>`:"")}
 function test(){
  if(!q)q=make(C(S[sec].skills));
  let choices=q.choices?`<div class="actions">${q.choices.map(c=>`<button class="btn" onclick="document.getElementById('ans').value='${esc(c)}'">${c}</button>`).join("")}</div>`:"";
@@ -315,22 +317,22 @@ function test(){
 }
 function check(){
  let v=document.getElementById("ans").value,ok=normalise(v)===normalise(q.ans);
- if(typeof q.ans==="number"){let z=parseFloat(v);ok=Number.isFinite(z)&&Math.abs(z-q.ans)<1e-8}
+ if(typeof q.ans==="number"){let fr=String(v).trim().match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/),z=fr?fr[1]/fr[2]:parseFloat(v);ok=Number.isFinite(z)&&Math.abs(z-q.ans)<1e-8}
  document.getElementById("fb").innerHTML=ok?`<div class="good"><strong>Correct.</strong> ${q.why}</div>`:`<div class="warning"><strong>Not yet.</strong> Use the worked solution to see the method, then try another question.</div>`;
- record(ok)
+ if(!q.done){q.done=1;record(ok)}
 }
 function newq(){q=make(C(S[sec].skills));render()}
 function genprint(){ps=[];let skills=S[sec].skills;for(let i=0;i<8;i++)ps.push(make(skills[i%skills.length]));render()}
 function printable(){
  if(!ps.length){let skills=S[sec].skills;for(let i=0;i<8;i++)ps.push(make(skills[i%skills.length]))}
  return `<div class="card"><h2>Printable Practice</h2><p>Eight questions with working space.</p><div class="actions noprint"><button class="btn primary" onclick="genprint()">Generate New Set</button><button class="btn" onclick="printx('pq')">Print Questions</button><button class="btn" onclick="printx('pa')">Print Worked Solutions</button></div>
- ${ps.map((x,i)=>`<div class="tile"><strong>${i+1}.</strong> ${x.text}${x.diag||""}<details><summary>Show worked solution</summary><p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></details></div>`).join("")}</div>
+ ${ps.map((x,i)=>`<div class="tile"><strong>${i+1}.</strong> ${qt(x)}${x.diag||""}<details><summary>Show worked solution</summary><p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></details></div>`).join("")}</div>
  <div id="pq" class="printsheet"></div><div id="pa" class="printsheet"></div>`;
 }
 function printx(id){
  let h=`<h2>Mr Nathan's Maths Tuition</h2><h3>${S[sec].title} — Printable Practice</h3><p>Name: ____________________ Date: ____________</p><hr>`;
- document.getElementById("pq").innerHTML=h+ps.map((x,i)=>`<div class="qprint"><strong>${i+1}.</strong> ${x.text}${x.diag||""}<p>...........................................................................................................</p><p>...........................................................................................................</p><p>...........................................................................................................</p></div>`).join("");
- document.getElementById("pa").innerHTML=h+"<h3>Worked Solutions</h3>"+ps.map((x,i)=>`<div class="solprint"><strong>${i+1}.</strong> ${x.text}${x.diag||""}<p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></div>`).join("");
+ document.getElementById("pq").innerHTML=h+ps.map((x,i)=>`<div class="qprint"><strong>${i+1}.</strong> ${qt(x)}${x.diag||""}<p>...........................................................................................................</p><p>...........................................................................................................</p><p>...........................................................................................................</p></div>`).join("");
+ document.getElementById("pa").innerHTML=h+"<h3>Worked Solutions</h3>"+ps.map((x,i)=>`<div class="solprint"><strong>${i+1}.</strong> ${qt(x)}${x.diag||""}<p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></div>`).join("");
  document.querySelectorAll(".printsheet").forEach(x=>x.classList.remove("printme"));document.getElementById(id).classList.add("printme");window.print()
 }
 function progress(){
@@ -344,12 +346,12 @@ function makem(r=true){
 function mastery(){
  if(!ms.length)makem(false);
  return `<div class="card"><h2>Full Histogram Mastery Test</h2><p>This mixed test moves from first principles to challenging Higher/Intermediate histogram reasoning.</p><div class="actions noprint"><button class="btn primary" onclick="makem(true)">Generate New Test</button><button class="btn" onclick="mprint(false)">Print Test</button><button class="btn" onclick="mprint(true)">Print Worked Solutions</button></div>
- ${ms.map((x,i)=>`<div class="tile"><strong>${i+1}.</strong> ${x.text}${x.diag||""}<details><summary>Show worked solution</summary><p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></details></div>`).join("")}</div><div id="mq" class="printsheet"></div><div id="ma" class="printsheet"></div>`;
+ ${ms.map((x,i)=>`<div class="tile"><strong>${i+1}.</strong> ${qt(x)}${x.diag||""}<details><summary>Show worked solution</summary><p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></details></div>`).join("")}</div><div id="mq" class="printsheet"></div><div id="ma" class="printsheet"></div>`;
 }
 function mprint(sol){
  let h=`<h2>Mr Nathan's Maths Tuition</h2><h3>Topic GCSE Higher/Intermediate – Histograms — Full Mastery Test</h3><p>Name: ____________________ Date: ____________</p><hr>`;
- document.getElementById("mq").innerHTML=h+ms.map((x,i)=>`<div class="qprint"><strong>${i+1}.</strong> ${x.text}${x.diag||""}<p>...........................................................................................................</p><p>...........................................................................................................</p><p>...........................................................................................................</p></div>`).join("");
- document.getElementById("ma").innerHTML=h+"<h3>Worked Solutions</h3>"+ms.map((x,i)=>`<div class="solprint"><strong>${i+1}.</strong> ${x.text}${x.diag||""}<p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></div>`).join("");
+ document.getElementById("mq").innerHTML=h+ms.map((x,i)=>`<div class="qprint"><strong>${i+1}.</strong> ${qt(x)}${x.diag||""}<p>...........................................................................................................</p><p>...........................................................................................................</p><p>...........................................................................................................</p></div>`).join("");
+ document.getElementById("ma").innerHTML=h+"<h3>Worked Solutions</h3>"+ms.map((x,i)=>`<div class="solprint"><strong>${i+1}.</strong> ${qt(x)}${x.diag||""}<p><strong>Answer:</strong> ${x.ans}</p><p>${x.why}</p></div>`).join("");
  document.querySelectorAll(".printsheet").forEach(x=>x.classList.remove("printme"));document.getElementById(sol?"ma":"mq").classList.add("printme");window.print()
 }
 function tabs(){return `<div class="tabs noprint">${["learn","test","print","progress"].map(x=>`<button class="tab ${tab===x?"active":""}" onclick="settab('${x}')">${x==="learn"?"Learn":x==="test"?"Interactive Test":x==="print"?"Printable Practice":"Progress"}</button>`).join("")}</div>`}
